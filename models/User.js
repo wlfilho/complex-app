@@ -30,6 +30,16 @@ User.prototype.validate = function() {
     if (this.data.username.length > 30) {"O username não pode ter mais de 100 caractéres."}
 }
 
+User.prototype.login = async function(callback) {
+    this.cleanUp()
+    const attemptedUser = await usersCollection.findOne({username: this.data.username})
+    if (attemptedUser && attemptedUser.password == this.data.password) {
+        callback("Congrats!")
+    } else {
+        callback("Invalid username/password")
+    }
+}
+
 User.prototype.register = function() {
     // Step #1: Validate User data
     this.cleanUp()
