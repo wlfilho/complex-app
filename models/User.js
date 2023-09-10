@@ -1,3 +1,4 @@
+const bcrypt = require("bcryptjs")
 const usersCollection = require('../db').collection("users")
 const validator = require("validator")
 
@@ -25,19 +26,21 @@ User.prototype.validate = function() {
     if (!validator.isEmail(this.data.email)) {this.errors.push("You must provide a valid email")}
     if (this.data.password == "") {this.errors.push("You must provide a valid password")}
     if (this.data.password.length > 0 && this.data.password.length < 12) {"A senha tem que ter pelo menos 12 caractéres."}
-    if (this.data.password.length > 100) {"A senha não pode ter mais de 100 caractéres."}
+    if (this.data.password.length > 50) {"A senha não pode ter mais de 50 caractéres."}
     if (this.data.username.length > 0 && this.data.username.length < 3) {"O username tem que ter pelo menos 3 caractéres."}
     if (this.data.username.length > 30) {"O username não pode ter mais de 100 caractéres."}
 }
 
-User.prototype.login = async function(callback) {
-    this.cleanUp()
-    const attemptedUser = await usersCollection.findOne({username: this.data.username})
-    if (attemptedUser && attemptedUser.password == this.data.password) {
-        callback("Congrats!")
-    } else {
-        callback("Invalid username/password")
-    }
+User.prototype.login = function() {
+    return new Promise(async (resolve, reject) => {
+        this.cleanUp()
+        const attemptedUser = await usersCollection.findOne({username: this.data.username})
+        if (attemptedUser && bcrypt.compareSync(this.data.password, attemptedUser.password)) {
+            resolve("Congrats!")
+        } else {
+            reject("Invalid username/password")
+        } 
+    })
 }
 
 User.prototype.register = function() {
@@ -48,6 +51,9 @@ User.prototype.register = function() {
     // Step 2: Only if there are no validation errors
     // then save the user data into a database
     if (!this.errors.length) {
+        //hash user password
+        let salt = bcrypt.genSaltSync(10)
+        this.data.password = bcrypt.hashSync(this.data.password, salt)
         usersCollection.insertOne(this.data)
     }
 }
